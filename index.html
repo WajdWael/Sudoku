@@ -5,12 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sudoku Game - POWR</title>
 
-    <!-- Load SDK from local file (must be in same folder) -->
-    <script src="powr-sdk.js"></script>
+    <!-- 1. LOAD THE SDK FIRST (local file) -->
+    <script src="./powr-sdk.js"></script>
 
     <style>
-        /* --- Full CSS (same as before) --- */
-        /* I'll include the complete CSS again for completeness */
+        /* --- Full CSS (unchanged) --- */
         * {
             margin: 0;
             padding: 0;
@@ -423,13 +422,15 @@
 </div>
 
 <script>
-    (function() {
+    // Wrap everything in a DOMContentLoaded to ensure the DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
         'use strict';
 
         // =========================================================
         //  CONFIGURATION  <-- 🔽 PUT YOUR REAL API KEY HERE
         // =========================================================
-const POWR_API_KEY = 'pk_288eebc13f0f88cf3fadba6f222a9c42f6d54ab8e8aafabc';   // <-- PASTE YOUR KEY        const POWR_ORIGIN = 'https://powr.games';
+        const POWR_API_KEY = 'pk_288eebc13f0f88cf3fadba6f222a9c42f6d54ab8e8aafabc';
+        const POWR_ORIGIN = 'https://powr.games';
 
         // ---- DOM refs ----
         const boardEl = document.getElementById('board');
@@ -571,6 +572,15 @@ const POWR_API_KEY = 'pk_288eebc13f0f88cf3fadba6f222a9c42f6d54ab8e8aafabc';   //
 
         // ---- POWR functions ----
         async function initPOWR() {
+            // Safety check: ensure the SDK loaded
+            if (typeof POWR === 'undefined') {
+                console.error('[POWR] SDK not loaded – check powr-sdk.js URL');
+                powrStatusEl.textContent = '❌ SDK Missing';
+                powrStatusEl.className = 'powr-status';
+                setStatus('POWR SDK failed to load.', 'error');
+                return;
+            }
+
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('token');
 
@@ -957,12 +967,13 @@ const POWR_API_KEY = 'pk_288eebc13f0f88cf3fadba6f222a9c42f6d54ab8e8aafabc';   //
         });
 
         // ---- Start everything (POWR first, then the game) ----
+        // Using DOMContentLoaded ensures the DOM is ready and the SDK script has loaded.
         (async function main() {
-            await initPOWR();     // <-- NOW `initPOWR` is defined before this call
+            await initPOWR();
             startNewGame();
         })();
 
-    })();
+    }); // end DOMContentLoaded
 </script>
 
 </body>
