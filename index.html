@@ -163,7 +163,43 @@ console.error('[POWR] Init error:',error);
 setStatus('POWR connection failed. Playing offline.','error');
 }
 }
-async function submitResultToPOWR(win){if(resultSubmitted||!powrInitialized||!powrClient){console.log('[POWR] Skipping submit');return;}const duration=Math.floor((Date.now()-gameStartedAt)/1000);let score=Math.max(0,10000-(timerSeconds*10)-(moves*5));if(!win)score=0;try{resultSubmitted=true;const result=await powrClient.results.submit({score:Math.round(score),duration:duration,win:win,completed:true,customStats:{moves:moves,hintsUsed:3-hintsRemaining,finalTime:timerSeconds}});console.log('[POWR] Result submitted successfully!',result);setStatus(`✅ Submitted! +${result.xpEarned} XP, +${result.coinsEarned} Coins`,'success');}catch(error){resultSubmitted=false;console.error('[POWR] Submission error:',error);setStatus('❌ Failed to submit result. Check console.','error');}}
+
+async function submitResultToPOWR(win) {
+  // 1. Guard against duplicate calls
+  if (resultSubmitted) return;
+  if (!powrInitialized || !powrClient) {
+    console.log('[POWR] Skipping submit: not connected.');
+    return;
+  }
+  
+  // Set flag IMMEDIATELY to block duplicate calls
+  resultSubmitted = true;
+  
+  const duration = Math.max(1, Math.floor((Date.now() - gameStartedAt) / 1000));
+  let score = Math.max(0, 10000 - (timerSeconds * 10) - (moves * 5));
+  if (!win) score = 0;
+  
+  try {
+    const result = await powrClient.results.submit({
+      score: Math.round(score),
+      duration: duration,
+      win: win,
+      completed: true,
+      customStats: {
+        moves: moves,
+        hintsUsed: 3 - hintsRemaining,
+        finalTime: timerSeconds
+      }
+    });
+    console.log('[POWR] Result submitted successfully!', result);
+    setStatus(`✅ Submitted! +${result.xpEarned} XP, +${result.coinsEarned} Coins`, 'success');
+  } catch (error) {
+    // If it failed, allow retrying
+    resultSubmitted = false;
+    console.error('[POWR] Submission error:', error);
+    setStatus('❌ Failed to submit result. Check console.', 'error');
+  }
+}
 
 class SudokuGame{
 constructor(){this.board=createEmptyBoard();this.solution=createEmptyBoard();this.given=Array.from({length:9},()=>Array(9).fill(false));this.selectedRow=-1;this.selectedCol=-1;this.moves=0;this.hintsRemaining=3;this.timerSeconds=0;this.isComplete=false;this.isOver=false;this.timerInterval=null;this.gameStartedAt=Date.now();}
