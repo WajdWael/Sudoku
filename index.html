@@ -1,713 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sudoku Game - POWR</title>
-    <!-- Load SDK from local file -->
-    <script src="./powr-sdk.js"></script>
-    <script>
-        // Quick check: if SDK loaded, POWR should be defined
-        console.log('[DEBUG] typeof POWR after script tag:', typeof POWR);
-    </script>
-    <style>
-        /* --- Full CSS (same as before) --- */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(145deg, #f0f4f8 0%, #d9e2ec 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            margin: 0;
-        }
-        .game-container {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            border-radius: 40px;
-            padding: 30px 35px 35px 35px;
-            box-shadow: 0 25px 50px -10px rgba(0,0,0,0.25), inset 0 1px 2px rgba(255,255,255,0.7);
-            max-width: 600px;
-            width: 100%;
-            transition: all 0.2s;
-        }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
-        .title { font-size: 28px; font-weight: 700; color: #1a2634; letter-spacing: 2px; background: linear-gradient(135deg, #1a2634, #3a4a5e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .title span { font-weight: 300; -webkit-text-fill-color: #6b7d93; }
-        .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
-        .controls select { padding: 8px 14px; border-radius: 30px; border: 1px solid #ccd7e4; background: white; font-size: 14px; font-weight: 500; color: #1a2634; cursor: pointer; outline: none; transition: 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
-        .controls select:hover { border-color: #7f9bb3; }
-        .controls select:focus { border-color: #4a6f8e; box-shadow: 0 0 0 3px rgba(74,111,142,0.15); }
-        .btn { padding: 8px 18px; border: none; border-radius: 30px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; background: #eef3f8; color: #1a2634; box-shadow: 0 2px 6px rgba(0,0,0,0.06); letter-spacing: 0.3px; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,0.10); }
-        .btn:active { transform: translateY(0px); box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
-        .btn-primary { background: #1a2634; color: white; }
-        .btn-primary:hover { background: #2c3e50; }
-        .btn-success { background: #2d7d4a; color: white; }
-        .btn-success:hover { background: #1f6a3a; }
-        .btn-warning { background: #b8860b; color: white; }
-        .btn-warning:hover { background: #a0750a; }
-        .btn-danger { background: #b13e3e; color: white; }
-        .btn-danger:hover { background: #9a3030; }
-        .btn-outline { background: transparent; border: 1.5px solid #b8cadb; }
-        .btn-outline:hover { background: #eef3f8; border-color: #7f9bb3; }
-        .game-info { display: flex; justify-content: space-between; align-items: center; padding: 6px 4px 14px 4px; font-size: 15px; color: #2d4054; font-weight: 500; border-bottom: 1px solid rgba(0,0,0,0.06); margin-bottom: 16px; flex-wrap: wrap; gap: 6px; }
-        .game-info .stat { display: flex; align-items: center; gap: 8px; }
-        .game-info .stat i { font-style: normal; opacity: 0.6; }
-        .game-info .stat span { background: rgba(0,0,0,0.05); padding: 2px 12px; border-radius: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
-        .game-info .status-msg { font-weight: 400; color: #4a6f8e; font-size: 14px; min-height: 22px; }
-        .game-info .status-msg.error { color: #b13e3e; }
-        .game-info .status-msg.success { color: #2d7d4a; }
-        .board-wrapper { position: relative; margin: 0 auto 16px auto; width: 100%; aspect-ratio: 1/1; max-width: 500px; touch-action: manipulation; }
-        .board { display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr); width: 100%; height: 100%; background: white; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.08), inset 0 0 0 2px #c4d3e0; overflow: hidden; aspect-ratio: 1/1; }
-        .cell { display: flex; align-items: center; justify-content: center; font-size: clamp(18px, 4.5vw, 34px); font-weight: 500; color: #1a2634; background: white; cursor: pointer; user-select: none; transition: background 0.08s ease; border: 1px solid #e2eaf1; aspect-ratio: 1/1; font-variant-numeric: tabular-nums; }
-        .cell:nth-child(3n) { border-right: 2.5px solid #7f9bb3; }
-        .cell:nth-child(9n) { border-right: none; }
-        .cell:nth-child(n+19):nth-child(-n+27) { border-bottom: 2.5px solid #7f9bb3; }
-        .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2.5px solid #7f9bb3; }
-        .cell.given { font-weight: 700; color: #0b1a2a; }
-        .cell.user { font-weight: 600; color: #1f5a8e; }
-        .cell.selected { background: #c8def0 !important; box-shadow: inset 0 0 0 2px #2c6b9e; z-index: 2; position: relative; }
-        .cell.highlighted { background: #eaf1f8; }
-        .cell.highlighted-number { background: #d4e3f0; }
-        .cell.error { color: #d43b3b !important; background: #ffe6e6 !important; }
-        .cell.error.highlighted { background: #ffd6d6 !important; }
-        .cell.hint-given { color: #1f7a3a !important; background: #e0f5e6 !important; font-weight: 700; }
-        .cell.completed-highlight { background: #e8f5e9 !important; }
-        .cell:active { transform: scale(0.96); }
-        .numpad { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 12px 0 14px 0; }
-        .numpad .num-btn { width: clamp(38px, 9vw, 50px); height: clamp(38px, 9vw, 50px); border: none; border-radius: 14px; font-size: clamp(18px, 4vw, 26px); font-weight: 600; background: white; color: #1a2634; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: 0.15s; border: 1px solid #dce6ef; display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
-        .numpad .num-btn:hover { background: #eaf1f8; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
-        .numpad .num-btn:active { transform: scale(0.92); }
-        .numpad .num-btn.erase-btn { background: #f5f0f0; color: #8a6e6e; font-size: clamp(16px, 3.5vw, 22px); }
-        .numpad .num-btn.erase-btn:hover { background: #fce4e4; color: #b13e3e; }
-        .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
-        .actions .btn { padding: 10px 22px; font-size: 14px; flex: 1 0 auto; min-width: 70px; max-width: 140px; }
-        @media (max-width: 520px) { .game-container { padding: 18px 16px 22px 16px; border-radius: 28px; } .title { font-size: 22px; } .controls select { font-size: 13px; padding: 6px 12px; } .btn { font-size: 12px; padding: 6px 14px; } .game-info { font-size: 13px; } .numpad { gap: 4px; } .numpad .num-btn { width: 34px; height: 34px; font-size: 16px; border-radius: 10px; } .actions .btn { padding: 8px 14px; font-size: 12px; min-width: 56px; } .board-wrapper { max-width: 100%; } }
-        @media (max-width: 400px) { .game-container { padding: 12px 10px 16px 10px; border-radius: 20px; } .title { font-size: 18px; } .numpad .num-btn { width: 30px; height: 30px; font-size: 14px; } .cell { font-size: 14px; } }
-        .congrats { text-align: center; padding: 10px 0 4px 0; font-size: 18px; font-weight: 700; color: #2d7d4a; letter-spacing: 0.5px; }
-        .congrats small { font-weight: 400; color: #4a6f8e; font-size: 14px; }
-        .hidden { display: none !important; }
-        .powr-status { font-size: 12px; background: #eef3f8; padding: 2px 12px; border-radius: 30px; color: #4a6f8e; border: 1px solid #dce6ef; }
-        .powr-status.connected { background: #e0f5e6; color: #1f6a3a; border-color: #a3d8b0; }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sudoku · POWR</title>
+<script src="./powr-sdk.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height:100vh; display:flex; justify-content:center; align-items:center; padding:20px; }
+.game-container { background: rgba(255,255,255,0.85); backdrop-filter:blur(12px); border-radius:40px; padding:30px 35px; max-width:600px; width:100%; box-shadow:0 25px 50px -10px rgba(0,0,0,0.25); }
+.header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px; }
+.title { font-size:28px; font-weight:700; color:#1a2634; }
+.controls { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+.controls select { padding:8px 14px; border-radius:30px; border:1px solid #ccd7e4; background:white; font-size:14px; cursor:pointer; }
+.btn { padding:8px 18px; border:none; border-radius:30px; font-size:14px; font-weight:600; cursor:pointer; transition:0.2s; background:#eef3f8; color:#1a2634; }
+.btn-primary { background:#1a2634; color:white; }
+.btn-success { background:#2d7d4a; color:white; }
+.btn-danger { background:#b13e3e; color:white; }
+.btn-warning { background:#b8860b; color:white; }
+.btn-outline { background:transparent; border:1.5px solid #b8cadb; }
+.btn:hover { transform:translateY(-2px); box-shadow:0 8px 18px rgba(0,0,0,0.10); }
+.btn:active { transform:translateY(0); }
+.game-info { display:flex; justify-content:space-between; padding:6px 4px 14px 4px; font-size:15px; color:#2d4054; border-bottom:1px solid rgba(0,0,0,0.06); margin-bottom:16px; flex-wrap:wrap; gap:6px; }
+.game-info .stat { display:flex; align-items:center; gap:8px; }
+.game-info .stat span { background:rgba(0,0,0,0.05); padding:2px 12px; border-radius:20px; font-weight:600; }
+.status-msg { font-weight:400; color:#4a6f8e; font-size:14px; min-height:22px; }
+.status-msg.error { color:#b13e3e; }
+.status-msg.success { color:#2d7d4a; }
+.board-wrapper { margin:0 auto 16px auto; width:100%; aspect-ratio:1/1; max-width:500px; }
+.board { display:grid; grid-template-columns:repeat(9,1fr); grid-template-rows:repeat(9,1fr); width:100%; height:100%; background:white; border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,0.08); overflow:hidden; aspect-ratio:1/1; }
+.cell { display:flex; align-items:center; justify-content:center; font-size:clamp(18px,4.5vw,34px); font-weight:500; background:white; cursor:pointer; border:1px solid #e2eaf1; }
+.cell:nth-child(3n) { border-right:2.5px solid #7f9bb3; }
+.cell:nth-child(9n) { border-right:none; }
+.cell:nth-child(n+19):nth-child(-n+27) { border-bottom:2.5px solid #7f9bb3; }
+.cell:nth-child(n+46):nth-child(-n+54) { border-bottom:2.5px solid #7f9bb3; }
+.cell.given { font-weight:700; color:#0b1a2a; }
+.cell.user { font-weight:600; color:#1f5a8e; }
+.cell.selected { background:#c8def0 !important; box-shadow:inset 0 0 0 2px #2c6b9e; }
+.cell.highlighted { background:#eaf1f8; }
+.cell.highlighted-number { background:#d4e3f0; }
+.cell.error { color:#d43b3b !important; background:#ffe6e6 !important; }
+.cell.completed-highlight { background:#e8f5e9 !important; }
+.numpad { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin:12px 0 14px 0; }
+.numpad .num-btn { width:clamp(38px,9vw,50px); height:clamp(38px,9vw,50px); border:none; border-radius:14px; font-size:clamp(18px,4vw,26px); font-weight:600; background:white; cursor:pointer; border:1px solid #dce6ef; transition:0.15s; }
+.numpad .num-btn:hover { background:#eaf1f8; transform:translateY(-2px); }
+.numpad .num-btn.erase-btn { background:#f5f0f0; color:#8a6e6e; }
+.numpad .num-btn.erase-btn:hover { background:#fce4e4; color:#b13e3e; }
+.actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:6px; }
+.actions .btn { padding:10px 22px; flex:1 0 auto; min-width:70px; max-width:140px; }
+.congrats { text-align:center; padding:10px 0 4px 0; font-size:18px; font-weight:700; color:#2d7d4a; }
+.hidden { display:none !important; }
+.powr-status { font-size:12px; background:#eef3f8; padding:2px 12px; border-radius:30px; color:#4a6f8e; border:1px solid #dce6ef; }
+.powr-status.connected { background:#e0f5e6; color:#1f6a3a; border-color:#a3d8b0; }
+</style>
 </head>
 <body>
-
 <div class="game-container" id="app">
-    <div class="header">
-        <div class="title">Sudoku</div>
-        <div style="display:flex; gap:6px; align-items:center;">
-            <span id="powrStatus" class="powr-status">⏳ Connecting...</span>
-            <button class="btn btn-outline" id="resetBtn" title="Reset current puzzle">↻</button>
-        </div>
-    </div>
-
-    <div class="controls">
-        <select id="difficultySelect">
-            <option value="easy">Easy</option>
-            <option value="medium" selected>Medium</option>
-            <option value="hard">Hard</option>
-            <option value="expert">Expert</option>
-        </select>
-        <button class="btn btn-primary" id="newGameBtn">New Game</button>
-    </div>
-
-    <div class="game-info">
-        <div class="stat"><i>⏱</i> <span id="timerDisplay">00:00</span></div>
-        <div class="stat"><i>✏️</i> <span id="movesDisplay">0</span></div>
-        <div class="stat"><i>💡</i> <span id="hintsDisplay">3</span></div>
-        <div class="status-msg" id="statusMsg"> </div>
-    </div>
-
-    <div class="board-wrapper">
-        <div class="board" id="board"></div>
-    </div>
-
-    <div class="numpad" id="numpad">
-        <button class="num-btn" data-num="1">1</button>
-        <button class="num-btn" data-num="2">2</button>
-        <button class="num-btn" data-num="3">3</button>
-        <button class="num-btn" data-num="4">4</button>
-        <button class="num-btn" data-num="5">5</button>
-        <button class="num-btn" data-num="6">6</button>
-        <button class="num-btn" data-num="7">7</button>
-        <button class="num-btn" data-num="8">8</button>
-        <button class="num-btn" data-num="9">9</button>
-        <button class="num-btn erase-btn" data-num="0">⌫</button>
-    </div>
-
-    <div class="actions">
-        <button class="btn btn-success" id="checkBtn">✓ Check</button>
-        <button class="btn btn-warning" id="hintBtn">💡 Hint</button>
-        <button class="btn btn-danger" id="clearBtn">✕ Clear</button>
-        <button class="btn btn-outline" id="giveUpBtn" style="border-color:#b13e3e; color:#b13e3e;">🏳️ Give Up</button>
-    </div>
-
-    <div class="congrats hidden" id="congratsMsg">
-        🎉 Puzzle Complete! 🎉 <small>— Great job!</small>
-    </div>
-    <div class="congrats hidden" id="giveUpMsg" style="color:#b13e3e;">
-        😔 You gave up. <small>Better luck next time!</small>
-    </div>
+<div class="header">
+<div class="title">Sudoku</div>
+<div style="display:flex; gap:6px; align-items:center;">
+<span id="powrStatus" class="powr-status">⏳ Connecting...</span>
+<button class="btn btn-outline" id="resetBtn">↻</button>
 </div>
-
+</div>
+<div class="controls">
+<select id="difficultySelect"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option><option value="expert">Expert</option></select>
+<button class="btn btn-primary" id="newGameBtn">New Game</button>
+</div>
+<div class="game-info">
+<div class="stat"><span>⏱</span> <span id="timerDisplay">00:00</span></div>
+<div class="stat"><span>✏️</span> <span id="movesDisplay">0</span></div>
+<div class="stat"><span>💡</span> <span id="hintsDisplay">3</span></div>
+<div class="status-msg" id="statusMsg"> </div>
+</div>
+<div class="board-wrapper"><div class="board" id="board"></div></div>
+<div class="numpad" id="numpad">
+<button class="num-btn" data-num="1">1</button>
+<button class="num-btn" data-num="2">2</button>
+<button class="num-btn" data-num="3">3</button>
+<button class="num-btn" data-num="4">4</button>
+<button class="num-btn" data-num="5">5</button>
+<button class="num-btn" data-num="6">6</button>
+<button class="num-btn" data-num="7">7</button>
+<button class="num-btn" data-num="8">8</button>
+<button class="num-btn" data-num="9">9</button>
+<button class="num-btn erase-btn" data-num="0">⌫</button>
+</div>
+<div class="actions">
+<button class="btn btn-success" id="checkBtn">✓ Check</button>
+<button class="btn btn-warning" id="hintBtn">💡 Hint</button>
+<button class="btn btn-danger" id="clearBtn">✕ Clear</button>
+<button class="btn btn-outline" id="giveUpBtn" style="border-color:#b13e3e; color:#b13e3e;">🏳️ Give Up</button>
+</div>
+<div class="congrats hidden" id="congratsMsg">🎉 Puzzle Complete! 🎉</div>
+<div class="congrats hidden" id="giveUpMsg" style="color:#b13e3e;">😔 You gave up.</div>
+</div>
 <script>
-    // Wrap everything in a DOMContentLoaded to ensure the DOM is ready
-    document.addEventListener('DOMContentLoaded', function() {
-        'use strict';
+document.addEventListener('DOMContentLoaded', function() {
+'use strict';
+const POWR_API_KEY = 'pk_288eebc13f0f88cf3fadba6f222a9c42f6d54ab8e8aafabc';
+const POWR_ORIGIN = 'https://powr.games';
+const boardEl = document.getElementById('board');
+const timerDisplay = document.getElementById('timerDisplay');
+const movesDisplay = document.getElementById('movesDisplay');
+const hintsDisplay = document.getElementById('hintsDisplay');
+const statusMsg = document.getElementById('statusMsg');
+const congratsMsg = document.getElementById('congratsMsg');
+const giveUpMsg = document.getElementById('giveUpMsg');
+const difficultySelect = document.getElementById('difficultySelect');
+const newGameBtn = document.getElementById('newGameBtn');
+const resetBtn = document.getElementById('resetBtn');
+const checkBtn = document.getElementById('checkBtn');
+const hintBtn = document.getElementById('hintBtn');
+const clearBtn = document.getElementById('clearBtn');
+const giveUpBtn = document.getElementById('giveUpBtn');
+const numpadBtns = document.querySelectorAll('.num-btn');
+const powrStatusEl = document.getElementById('powrStatus');
 
-        // =========================================================
-        //  CONFIGURATION  <-- 🔽 PUT YOUR REAL API KEY HERE
-        // =========================================================
-        const POWR_API_KEY = 'pk_288eebc13f0f88cf3fadba6f222a9c42f6d54ab8e8aafabc';
-        const POWR_ORIGIN = 'https://powr.games';
+let board=[], solution=[], given=[];
+let selectedRow=-1, selectedCol=-1;
+let moves=0, hintsRemaining=3, timerSeconds=0, timerInterval=null;
+let isGameComplete=false, isGameOver=false;
+let powrClient=null, powrInitialized=false, gameStartedAt=null, resultSubmitted=false;
 
-        // ---- DOM refs ----
-        const boardEl = document.getElementById('board');
-        const timerDisplay = document.getElementById('timerDisplay');
-        const movesDisplay = document.getElementById('movesDisplay');
-        const hintsDisplay = document.getElementById('hintsDisplay');
-        const statusMsg = document.getElementById('statusMsg');
-        const congratsMsg = document.getElementById('congratsMsg');
-        const giveUpMsg = document.getElementById('giveUpMsg');
-        const difficultySelect = document.getElementById('difficultySelect');
-        const newGameBtn = document.getElementById('newGameBtn');
-        const resetBtn = document.getElementById('resetBtn');
-        const checkBtn = document.getElementById('checkBtn');
-        const hintBtn = document.getElementById('hintBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        const giveUpBtn = document.getElementById('giveUpBtn');
-        const numpadBtns = document.querySelectorAll('.num-btn');
-        const powrStatusEl = document.getElementById('powrStatus');
+function createEmptyBoard(){return Array.from({length:9},()=>Array(9).fill(0));}
+function copyBoard(b){return b.map(row=>[...row]);}
+function isValidPlacement(b,row,col,num){for(let i=0;i<9;i++){if(b[row][i]===num||b[i][col]===num)return false;}const br=Math.floor(row/3)*3,bc=Math.floor(col/3)*3;for(let r=br;r<br+3;r++)for(let c=bc;c<bc+3;c++)if(b[r][c]===num)return false;return true;}
+function solveSudoku(b){for(let r=0;r<9;r++){for(let c=0;c<9;c++){if(b[r][c]===0){const nums=[1,2,3,4,5,6,7,8,9];for(let i=nums.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[nums[i],nums[j]]=[nums[j],nums[i]];}for(const n of nums){if(isValidPlacement(b,r,c,n)){b[r][c]=n;if(solveSudoku(b))return true;b[r][c]=0;}}return false;}}}return true;}
+function countSolutions(b,limit=2){let count=0;function search(b){if(count>=limit)return;for(let r=0;r<9;r++){for(let c=0;c<9;c++){if(b[r][c]===0){for(let n=1;n<=9;n++){if(isValidPlacement(b,r,c,n)){b[r][c]=n;search(b);if(count>=limit){b[r][c]=0;return;}b[r][c]=0;}}return;}}}count++;}const copy=copyBoard(b);search(copy);return count;}
+function generateCompleteBoard(){const b=createEmptyBoard();solveSudoku(b);return b;}
+function generatePuzzle(difficulty){const targetClues={easy:36,medium:30,hard:24,expert:18}[difficulty]||30;const full=generateCompleteBoard();const puzzle=copyBoard(full);const givenMask=Array.from({length:9},()=>Array(9).fill(true));const positions=[];for(let r=0;r<9;r++)for(let c=0;c<9;c++)positions.push([r,c]);for(let i=positions.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[positions[i],positions[j]]=[positions[j],positions[i]];}let removed=0;const targetRemoved=81-targetClues;for(const [r,c] of positions){if(removed>=targetRemoved)break;const backup=puzzle[r][c];puzzle[r][c]=0;givenMask[r][c]=false;const solCount=countSolutions(puzzle,2);if(solCount===1){removed++;}else{puzzle[r][c]=backup;givenMask[r][c]=true;}}return{puzzle,solution:full,given:givenMask};}
 
-        // ---- Game state ----
-        let board = [];
-        let solution = [];
-        let given = [];
-        let selectedRow = -1;
-        let selectedCol = -1;
-        let moves = 0;
-        let hintsRemaining = 3;
-        let timerSeconds = 0;
-        let timerInterval = null;
-        let isGameComplete = false;
-        let isGameOver = false;
+async function initPOWR(){
+if(typeof POWR==='undefined'){console.error('[POWR] SDK not loaded');powrStatusEl.textContent='❌ SDK Missing';setStatus('POWR SDK failed to load.','error');return;}
+const token=new URLSearchParams(window.location.search).get('token');
+if(!token){powrStatusEl.textContent='⚪ Standalone';powrStatusEl.className='powr-status';console.log('[POWR] No token found. Running in standalone mode.');return;}
+if(!POWR_API_KEY||POWR_API_KEY==='pk_live_YOUR_ACTUAL_KEY'){powrStatusEl.textContent='⚠️ Missing API Key';console.error('[POWR] Please set your API key.');return;}
+try{powrStatusEl.textContent='⏳ Connecting...';powrClient=await POWR.init({apiKey:POWR_API_KEY,token:token,platformOrigin:POWR_ORIGIN,debug:true});powrInitialized=true;gameStartedAt=Date.now();powrStatusEl.textContent=`✅ ${powrClient.player.username}`;powrStatusEl.className='powr-status connected';console.log('[POWR] Connected successfully!',powrClient.player);setStatus(`Welcome ${powrClient.player.username}!`,'success');}catch(error){powrStatusEl.textContent='❌ Connection Error';console.error('[POWR] Init error:',error);setStatus('POWR connection failed. Playing offline.','error');}
+}
+async function submitResultToPOWR(win){if(resultSubmitted||!powrInitialized||!powrClient){console.log('[POWR] Skipping submit');return;}const duration=Math.floor((Date.now()-gameStartedAt)/1000);let score=Math.max(0,10000-(timerSeconds*10)-(moves*5));if(!win)score=0;try{resultSubmitted=true;const result=await powrClient.results.submit({score:Math.round(score),duration:duration,win:win,completed:true,customStats:{moves:moves,hintsUsed:3-hintsRemaining,finalTime:timerSeconds}});console.log('[POWR] Result submitted successfully!',result);setStatus(`✅ Submitted! +${result.xpEarned} XP, +${result.coinsEarned} Coins`,'success');}catch(error){resultSubmitted=false;console.error('[POWR] Submission error:',error);setStatus('❌ Failed to submit result. Check console.','error');}}
 
-        let powrClient = null;
-        let powrInitialized = false;
-        let gameStartedAt = null;
-        let resultSubmitted = false;
-
-        // ---- Sudoku engine ----
-        function createEmptyBoard() {
-            return Array.from({ length: 9 }, () => Array(9).fill(0));
-        }
-        function copyBoard(b) {
-            return b.map(row => [...row]);
-        }
-        function isValidPlacement(b, row, col, num) {
-            for (let i = 0; i < 9; i++) {
-                if (b[row][i] === num) return false;
-                if (b[i][col] === num) return false;
-            }
-            const br = Math.floor(row / 3) * 3;
-            const bc = Math.floor(col / 3) * 3;
-            for (let r = br; r < br + 3; r++)
-                for (let c = bc; c < bc + 3; c++)
-                    if (b[r][c] === num) return false;
-            return true;
-        }
-        function solveSudoku(b) {
-            for (let r = 0; r < 9; r++) {
-                for (let c = 0; c < 9; c++) {
-                    if (b[r][c] === 0) {
-                        const nums = [1,2,3,4,5,6,7,8,9];
-                        for (let i = nums.length - 1; i > 0; i--) {
-                            const j = Math.floor(Math.random() * (i + 1));
-                            [nums[i], nums[j]] = [nums[j], nums[i]];
-                        }
-                        for (const n of nums) {
-                            if (isValidPlacement(b, r, c, n)) {
-                                b[r][c] = n;
-                                if (solveSudoku(b)) return true;
-                                b[r][c] = 0;
-                            }
-                        }
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-        function countSolutions(b, limit = 2) {
-            let count = 0;
-            function search(b) {
-                if (count >= limit) return;
-                for (let r = 0; r < 9; r++) {
-                    for (let c = 0; c < 9; c++) {
-                        if (b[r][c] === 0) {
-                            for (let n = 1; n <= 9; n++) {
-                                if (isValidPlacement(b, r, c, n)) {
-                                    b[r][c] = n;
-                                    search(b);
-                                    if (count >= limit) { b[r][c] = 0; return; }
-                                    b[r][c] = 0;
-                                }
-                            }
-                            return;
-                        }
-                    }
-                }
-                count++;
-            }
-            const copy = copyBoard(b);
-            search(copy);
-            return count;
-        }
-        function generateCompleteBoard() {
-            const b = createEmptyBoard();
-            solveSudoku(b);
-            return b;
-        }
-        function generatePuzzle(difficulty) {
-            const targetClues = { easy: 36, medium: 30, hard: 24, expert: 18 } [difficulty] || 30;
-            const full = generateCompleteBoard();
-            const puzzle = copyBoard(full);
-            const givenMask = Array.from({ length: 9 }, () => Array(9).fill(true));
-            const positions = [];
-            for (let r = 0; r < 9; r++)
-                for (let c = 0; c < 9; c++)
-                    positions.push([r, c]);
-            for (let i = positions.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [positions[i], positions[j]] = [positions[j], positions[i]];
-            }
-            let removed = 0;
-            const targetRemoved = 81 - targetClues;
-            for (const [r, c] of positions) {
-                if (removed >= targetRemoved) break;
-                const backup = puzzle[r][c];
-                puzzle[r][c] = 0;
-                givenMask[r][c] = false;
-                const solCount = countSolutions(puzzle, 2);
-                if (solCount === 1) {
-                    removed++;
-                } else {
-                    puzzle[r][c] = backup;
-                    givenMask[r][c] = true;
-                }
-            }
-            return { puzzle, solution: full, given: givenMask };
-        }
-
-        // ---- POWR functions ----
-        async function initPOWR() {
-            // Safety check: ensure the SDK loaded
-            if (typeof POWR === 'undefined') {
-                console.error('[POWR] SDK not loaded – check powr-sdk.js URL');
-                powrStatusEl.textContent = '❌ SDK Missing';
-                powrStatusEl.className = 'powr-status';
-                setStatus('POWR SDK failed to load.', 'error');
-                return;
-            }
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token');
-
-            if (!token) {
-                powrStatusEl.textContent = '⚪ Standalone';
-                powrStatusEl.className = 'powr-status';
-                console.log('[POWR] No token found. Running in standalone mode.');
-                return;
-            }
-
-            if (!POWR_API_KEY || POWR_API_KEY === 'pk_live_YOUR_ACTUAL_KEY') {
-                powrStatusEl.textContent = '⚠️ Missing API Key';
-                powrStatusEl.className = 'powr-status';
-                console.error('[POWR] Please set your API key.');
-                return;
-            }
-
-            try {
-                powrStatusEl.textContent = '⏳ Connecting...';
-                powrStatusEl.className = 'powr-status';
-                powrClient = await POWR.init({
-                    apiKey: POWR_API_KEY,
-                    token: token,
-                    platformOrigin: POWR_ORIGIN,
-                    debug: true
-                });
-                powrInitialized = true;
-                gameStartedAt = Date.now();
-                powrStatusEl.textContent = `✅ ${powrClient.player.username}`;
-                powrStatusEl.className = 'powr-status connected';
-                console.log('[POWR] Connected successfully!', powrClient.player);
-                setStatus(`Welcome ${powrClient.player.username}!`, 'success');
-            } catch (error) {
-                powrStatusEl.textContent = '❌ Connection Error';
-                powrStatusEl.className = 'powr-status';
-                console.error('[POWR] Init error:', error);
-                setStatus('POWR connection failed. Playing offline.', 'error');
-            }
-        }
-
-        async function submitResultToPOWR(win) {
-            if (resultSubmitted) return;
-            if (!powrInitialized || !powrClient) {
-                console.log('[POWR] Skipping submit: not connected.');
-                return;
-            }
-            const duration = Math.floor((Date.now() - gameStartedAt) / 1000);
-            let score = Math.max(0, 10000 - (timerSeconds * 10) - (moves * 5));
-            if (!win) score = 0;
-            try {
-                resultSubmitted = true;
-                const result = await powrClient.results.submit({
-                    score: Math.round(score),
-                    duration: duration,
-                    win: win,
-                    completed: true,
-                    customStats: {
-                        moves: moves,
-                        hintsUsed: 3 - hintsRemaining,
-                        finalTime: timerSeconds
-                    }
-                });
-                console.log('[POWR] Result submitted successfully!', result);
-                setStatus(`✅ Submitted! +${result.xpEarned} XP, +${result.coinsEarned} Coins`, 'success');
-            } catch (error) {
-                resultSubmitted = false;
-                console.error('[POWR] Submission error:', error);
-                setStatus('❌ Failed to submit result. Check console.', 'error');
-            }
-        }
-
-        // ---- Game class ----
-        class SudokuGame {
-            constructor() {
-                this.board = createEmptyBoard();
-                this.solution = createEmptyBoard();
-                this.given = Array.from({ length: 9 }, () => Array(9).fill(false));
-                this.selectedRow = -1;
-                this.selectedCol = -1;
-                this.moves = 0;
-                this.hintsRemaining = 3;
-                this.timerSeconds = 0;
-                this.isComplete = false;
-                this.isOver = false;
-                this.timerInterval = null;
-                this.gameStartedAt = Date.now();
-            }
-            loadPuzzle(puzzleData) {
-                this.board = puzzleData.puzzle;
-                this.solution = puzzleData.solution;
-                this.given = puzzleData.given;
-                this.selectedRow = -1;
-                this.selectedCol = -1;
-                this.moves = 0;
-                this.hintsRemaining = 3;
-                this.isComplete = false;
-                this.isOver = false;
-                this.timerSeconds = 0;
-                this.gameStartedAt = Date.now();
-                resultSubmitted = false;
-                congratsMsg.classList.add('hidden');
-                giveUpMsg.classList.add('hidden');
-                if (this.timerInterval) clearInterval(this.timerInterval);
-                this.startTimer();
-                this.render();
-                this.updateStats();
-                setStatus('Game started', '');
-            }
-            startTimer() {
-                if (this.timerInterval) clearInterval(this.timerInterval);
-                this.timerSeconds = 0;
-                this.timerInterval = setInterval(() => {
-                    this.timerSeconds++;
-                    timerDisplay.textContent = formatTime(this.timerSeconds);
-                }, 1000);
-            }
-            stopTimer() {
-                if (this.timerInterval) {
-                    clearInterval(this.timerInterval);
-                    this.timerInterval = null;
-                }
-            }
-            selectCell(row, col) {
-                if (this.isComplete || this.isOver) return;
-                if (row < 0 || row > 8 || col < 0 || col > 8) {
-                    this.selectedRow = -1;
-                    this.selectedCol = -1;
-                    this.render();
-                    return;
-                }
-                this.selectedRow = row;
-                this.selectedCol = col;
-                this.render();
-            }
-            inputNumber(num) {
-                if (this.isComplete || this.isOver) return;
-                if (this.selectedRow < 0 || this.selectedCol < 0) {
-                    setStatus('Select a cell first', 'error');
-                    return;
-                }
-                const r = this.selectedRow, c = this.selectedCol;
-                if (this.given[r][c]) {
-                    setStatus('This cell is pre-filled', 'error');
-                    return;
-                }
-                if (num < 1 || num > 9) {
-                    if (this.board[r][c] !== 0) {
-                        this.board[r][c] = 0;
-                        this.moves++;
-                        this.render();
-                        this.updateStats();
-                        setStatus('Cell cleared', '');
-                        this.checkCompletion();
-                    }
-                    return;
-                }
-                this.board[r][c] = num;
-                this.moves++;
-                this.render();
-                this.updateStats();
-                if (this.board[r][c] === this.solution[r][c]) {
-                    setStatus('✓ Correct!', 'success');
-                } else {
-                    setStatus('⚠️ Try again', 'error');
-                }
-                this.checkCompletion();
-            }
-            checkCompletion() {
-                for (let r = 0; r < 9; r++) {
-                    for (let c = 0; c < 9; c++) {
-                        if (this.board[r][c] !== this.solution[r][c]) return;
-                    }
-                }
-                this.isComplete = true;
-                this.stopTimer();
-                congratsMsg.classList.remove('hidden');
-                giveUpMsg.classList.add('hidden');
-                setStatus('🎉 Complete!', 'success');
-                this.render();
-                submitResultToPOWR(true);
-            }
-            giveHint() {
-                if (this.isComplete || this.isOver) return;
-                if (this.hintsRemaining <= 0) {
-                    setStatus('No hints remaining', 'error');
-                    return;
-                }
-                const wrongCells = [];
-                for (let r = 0; r < 9; r++) {
-                    for (let c = 0; c < 9; c++) {
-                        if (!this.given[r][c] && this.board[r][c] !== this.solution[r][c]) {
-                            wrongCells.push([r, c]);
-                        }
-                    }
-                }
-                if (wrongCells.length === 0) {
-                    setStatus('Everything is correct!', 'success');
-                    return;
-                }
-                const [r, c] = wrongCells[Math.floor(Math.random() * wrongCells.length)];
-                this.board[r][c] = this.solution[r][c];
-                this.given[r][c] = true;
-                this.hintsRemaining--;
-                this.moves++;
-                this.render();
-                this.updateStats();
-                setStatus(`💡 Hint placed at (${r+1}, ${c+1})`, '');
-                this.checkCompletion();
-            }
-            checkSolution() {
-                if (this.isComplete || this.isOver) return;
-                let hasError = false, emptyCells = 0;
-                for (let r = 0; r < 9; r++) {
-                    for (let c = 0; c < 9; c++) {
-                        if (this.board[r][c] === 0) { emptyCells++; continue; }
-                        if (this.board[r][c] !== this.solution[r][c]) hasError = true;
-                    }
-                }
-                if (emptyCells === 0 && !hasError) { this.checkCompletion(); return; }
-                if (hasError) setStatus('❌ Some numbers are incorrect', 'error');
-                else if (emptyCells > 0) setStatus(`✏️ ${emptyCells} cell(s) remaining`, '');
-                this.render();
-            }
-            clearSelected() {
-                if (this.isComplete || this.isOver) return;
-                if (this.selectedRow < 0 || this.selectedCol < 0) {
-                    setStatus('Select a cell first', 'error');
-                    return;
-                }
-                const r = this.selectedRow, c = this.selectedCol;
-                if (this.given[r][c]) {
-                    setStatus('Cannot clear pre-filled cell', 'error');
-                    return;
-                }
-                if (this.board[r][c] !== 0) {
-                    this.board[r][c] = 0;
-                    this.moves++;
-                    this.render();
-                    this.updateStats();
-                    setStatus('Cell cleared', '');
-                }
-            }
-            giveUp() {
-                if (this.isComplete || this.isOver) return;
-                this.isOver = true;
-                this.isComplete = false;
-                this.stopTimer();
-                giveUpMsg.classList.remove('hidden');
-                congratsMsg.classList.add('hidden');
-                setStatus('😔 You gave up.', 'error');
-                this.render();
-                submitResultToPOWR(false);
-            }
-            resetPuzzle() {
-                const initialPuzzle = copyBoard(this.solution);
-                for (let r = 0; r < 9; r++) {
-                    for (let c = 0; c < 9; c++) {
-                        if (!this.given[r][c]) initialPuzzle[r][c] = 0;
-                    }
-                }
-                this.board = initialPuzzle;
-                this.selectedRow = -1;
-                this.selectedCol = -1;
-                this.moves = 0;
-                this.isComplete = false;
-                this.isOver = false;
-                resultSubmitted = false;
-                this.timerSeconds = 0;
-                congratsMsg.classList.add('hidden');
-                giveUpMsg.classList.add('hidden');
-                if (this.timerInterval) clearInterval(this.timerInterval);
-                this.startTimer();
-                this.render();
-                this.updateStats();
-                setStatus('Puzzle reset', '');
-            }
-            updateStats() {
-                movesDisplay.textContent = this.moves;
-                hintsDisplay.textContent = this.hintsRemaining;
-                timerDisplay.textContent = formatTime(this.timerSeconds);
-            }
-            render() {
-                boardEl.innerHTML = '';
-                const sr = this.selectedRow, sc = this.selectedCol;
-                const selectedNum = (sr >= 0 && sc >= 0) ? this.board[sr][sc] : 0;
-                for (let r = 0; r < 9; r++) {
-                    for (let c = 0; c < 9; c++) {
-                        const cell = document.createElement('div');
-                        cell.className = 'cell';
-                        cell.dataset.row = r;
-                        cell.dataset.col = c;
-                        const val = this.board[r][c];
-                        const isGiven = this.given[r][c];
-                        const isSelected = (r === sr && c === sc);
-                        const isHighlighted = (sr >= 0 && sc >= 0 && (r === sr || c === sc));
-                        const isBoxHighlighted = (sr >= 0 && sc >= 0 &&
-                            Math.floor(r/3) === Math.floor(sr/3) &&
-                            Math.floor(c/3) === Math.floor(sc/3));
-                        const isSameNumber = (sr >= 0 && sc >= 0 && val !== 0 && val === selectedNum && !(r === sr && c === sc));
-                        if (val !== 0) {
-                            cell.textContent = val;
-                            cell.classList.add(isGiven ? 'given' : 'user');
-                        }
-                        if (isSelected) cell.classList.add('selected');
-                        if (isHighlighted && !isSelected) cell.classList.add('highlighted');
-                        if (isBoxHighlighted && !isSelected && !isHighlighted) cell.classList.add('highlighted');
-                        if (isSameNumber) cell.classList.add('highlighted-number');
-                        if (!isGiven && val !== 0 && val !== this.solution[r][c]) {
-                            cell.classList.add('error');
-                        }
-                        if (this.isComplete) cell.classList.add('completed-highlight');
-                        cell.addEventListener('click', () => this.selectCell(r, c));
-                        boardEl.appendChild(cell);
-                    }
-                }
-            }
-        }
-
-        // ---- Utility ----
-        function formatTime(sec) {
-            const m = String(Math.floor(sec / 60)).padStart(2, '0');
-            const s = String(sec % 60).padStart(2, '0');
-            return `${m}:${s}`;
-        }
-        function setStatus(msg, type = '') {
-            statusMsg.textContent = msg || '\u00A0';
-            statusMsg.className = 'status-msg' + (type ? ' ' + type : '');
-        }
-
-        // ---- Instantiate & start ----
-        const game = new SudokuGame();
-
-        function startNewGame() {
-            const diff = difficultySelect.value;
-            setStatus('Generating puzzle...', '');
-            setTimeout(() => {
-                try {
-                    const data = generatePuzzle(diff);
-                    game.loadPuzzle(data);
-                    resultSubmitted = false;
-                } catch (e) {
-                    console.error(e);
-                    setStatus('Error generating puzzle. Try again.', 'error');
-                }
-            }, 50);
-        }
-
-        // ---- Event listeners ----
-        newGameBtn.addEventListener('click', startNewGame);
-        resetBtn.addEventListener('click', () => {
-            if (game.solution.some(row => row.some(v => v !== 0))) {
-                game.resetPuzzle();
-            } else {
-                setStatus('Start a game first', 'error');
-            }
-        });
-        checkBtn.addEventListener('click', () => game.checkSolution());
-        hintBtn.addEventListener('click', () => game.giveHint());
-        clearBtn.addEventListener('click', () => game.clearSelected());
-        giveUpBtn.addEventListener('click', () => game.giveUp());
-        numpadBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const num = parseInt(btn.dataset.num);
-                game.inputNumber(num);
-            });
-        });
-        document.addEventListener('keydown', (e) => {
-            if (e.key >= '1' && e.key <= '9') { e.preventDefault(); game.inputNumber(parseInt(e.key)); }
-            else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') { e.preventDefault(); game.inputNumber(0); }
-            else if (e.key.startsWith('Arrow')) {
-                e.preventDefault();
-                let r = game.selectedRow, c = game.selectedCol;
-                if (r < 0 || c < 0) { r = 4; c = 4; }
-                else {
-                    if (e.key === 'ArrowUp') r = Math.max(0, r - 1);
-                    if (e.key === 'ArrowDown') r = Math.min(8, r + 1);
-                    if (e.key === 'ArrowLeft') c = Math.max(0, c - 1);
-                    if (e.key === 'ArrowRight') c = Math.min(8, c + 1);
-                }
-                game.selectCell(r, c);
-            }
-            else if (e.key === 'h' || e.key === 'H') { e.preventDefault(); game.giveHint(); }
-            else if (e.key === 'c' || e.key === 'C') { e.preventDefault(); game.checkSolution(); }
-        });
-
-        // ---- Start everything (POWR first, then the game) ----
-        // Using DOMContentLoaded ensures the DOM is ready and the SDK script has loaded.
-        (async function main() {
-            await initPOWR();
-            startNewGame();
-        })();
-
-    }); // end DOMContentLoaded
+class SudokuGame{
+constructor(){this.board=createEmptyBoard();this.solution=createEmptyBoard();this.given=Array.from({length:9},()=>Array(9).fill(false));this.selectedRow=-1;this.selectedCol=-1;this.moves=0;this.hintsRemaining=3;this.timerSeconds=0;this.isComplete=false;this.isOver=false;this.timerInterval=null;this.gameStartedAt=Date.now();}
+loadPuzzle(data){this.board=data.puzzle;this.solution=data.solution;this.given=data.given;this.selectedRow=-1;this.selectedCol=-1;this.moves=0;this.hintsRemaining=3;this.isComplete=false;this.isOver=false;this.timerSeconds=0;this.gameStartedAt=Date.now();resultSubmitted=false;congratsMsg.classList.add('hidden');giveUpMsg.classList.add('hidden');if(this.timerInterval)clearInterval(this.timerInterval);this.startTimer();this.render();this.updateStats();setStatus('Game started','');}
+startTimer(){if(this.timerInterval)clearInterval(this.timerInterval);this.timerSeconds=0;this.timerInterval=setInterval(()=>{this.timerSeconds++;timerDisplay.textContent=formatTime(this.timerSeconds);},1000);}
+stopTimer(){if(this.timerInterval){clearInterval(this.timerInterval);this.timerInterval=null;}}
+selectCell(row,col){if(this.isComplete||this.isOver)return;if(row<0||row>8||col<0||col>8){this.selectedRow=-1;this.selectedCol=-1;this.render();return;}this.selectedRow=row;this.selectedCol=col;this.render();}
+inputNumber(num){if(this.isComplete||this.isOver)return;if(this.selectedRow<0||this.selectedCol<0){setStatus('Select a cell first','error');return;}const r=this.selectedRow,c=this.selectedCol;if(this.given[r][c]){setStatus('This cell is pre-filled','error');return;}if(num<1||num>9){if(this.board[r][c]!==0){this.board[r][c]=0;this.moves++;this.render();this.updateStats();setStatus('Cell cleared','');this.checkCompletion();}return;}this.board[r][c]=num;this.moves++;this.render();this.updateStats();if(this.board[r][c]===this.solution[r][c])setStatus('✓ Correct!','success');else setStatus('⚠️ Try again','error');this.checkCompletion();}
+checkCompletion(){for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(this.board[r][c]!==this.solution[r][c])return;this.isComplete=true;this.stopTimer();congratsMsg.classList.remove('hidden');giveUpMsg.classList.add('hidden');setStatus('🎉 Complete!','success');this.render();submitResultToPOWR(true);}
+giveHint(){if(this.isComplete||this.isOver)return;if(this.hintsRemaining<=0){setStatus('No hints remaining','error');return;}const wrongCells=[];for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!this.given[r][c]&&this.board[r][c]!==this.solution[r][c])wrongCells.push([r,c]);if(wrongCells.length===0){setStatus('Everything is correct!','success');return;}const [r,c]=wrongCells[Math.floor(Math.random()*wrongCells.length)];this.board[r][c]=this.solution[r][c];this.given[r][c]=true;this.hintsRemaining--;this.moves++;this.render();this.updateStats();setStatus(`💡 Hint placed at (${r+1}, ${c+1})`,'');this.checkCompletion();}
+checkSolution(){if(this.isComplete||this.isOver)return;let hasError=false,emptyCells=0;for(let r=0;r<9;r++)for(let c=0;c<9;c++){if(this.board[r][c]===0){emptyCells++;continue;}if(this.board[r][c]!==this.solution[r][c])hasError=true;}if(emptyCells===0&&!hasError){this.checkCompletion();return;}if(hasError)setStatus('❌ Some numbers are incorrect','error');else if(emptyCells>0)setStatus(`✏️ ${emptyCells} cell(s) remaining`,'');this.render();}
+clearSelected(){if(this.isComplete||this.isOver)return;if(this.selectedRow<0||this.selectedCol<0){setStatus('Select a cell first','error');return;}const r=this.selectedRow,c=this.selectedCol;if(this.given[r][c]){setStatus('Cannot clear pre-filled cell','error');return;}if(this.board[r][c]!==0){this.board[r][c]=0;this.moves++;this.render();this.updateStats();setStatus('Cell cleared','');}}
+giveUp(){if(this.isComplete||this.isOver)return;this.isOver=true;this.isComplete=false;this.stopTimer();giveUpMsg.classList.remove('hidden');congratsMsg.classList.add('hidden');setStatus('😔 You gave up.','error');this.render();submitResultToPOWR(false);}
+resetPuzzle(){const initialPuzzle=copyBoard(this.solution);for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(!this.given[r][c])initialPuzzle[r][c]=0;this.board=initialPuzzle;this.selectedRow=-1;this.selectedCol=-1;this.moves=0;this.isComplete=false;this.isOver=false;resultSubmitted=false;this.timerSeconds=0;congratsMsg.classList.add('hidden');giveUpMsg.classList.add('hidden');if(this.timerInterval)clearInterval(this.timerInterval);this.startTimer();this.render();this.updateStats();setStatus('Puzzle reset','');}
+updateStats(){movesDisplay.textContent=this.moves;hintsDisplay.textContent=this.hintsRemaining;timerDisplay.textContent=formatTime(this.timerSeconds);}
+render(){boardEl.innerHTML='';const sr=this.selectedRow,sc=this.selectedCol;const selectedNum=(sr>=0&&sc>=0)?this.board[sr][sc]:0;for(let r=0;r<9;r++){for(let c=0;c<9;c++){const cell=document.createElement('div');cell.className='cell';cell.dataset.row=r;cell.dataset.col=c;const val=this.board[r][c];const isGiven=this.given[r][c];const isSelected=(r===sr&&c===sc);const isHighlighted=(sr>=0&&sc>=0&&(r===sr||c===sc));const isBoxHighlighted=(sr>=0&&sc>=0&&Math.floor(r/3)===Math.floor(sr/3)&&Math.floor(c/3)===Math.floor(sc/3));const isSameNumber=(sr>=0&&sc>=0&&val!==0&&val===selectedNum&&!(r===sr&&c===sc));if(val!==0){cell.textContent=val;cell.classList.add(isGiven?'given':'user');}if(isSelected)cell.classList.add('selected');if(isHighlighted&&!isSelected)cell.classList.add('highlighted');if(isBoxHighlighted&&!isSelected&&!isHighlighted)cell.classList.add('highlighted');if(isSameNumber)cell.classList.add('highlighted-number');if(!isGiven&&val!==0&&val!==this.solution[r][c])cell.classList.add('error');if(this.isComplete)cell.classList.add('completed-highlight');cell.addEventListener('click',()=>this.selectCell(r,c));boardEl.appendChild(cell);}}}
+}
+function formatTime(sec){const m=String(Math.floor(sec/60)).padStart(2,'0');const s=String(sec%60).padStart(2,'0');return`${m}:${s}`;}
+function setStatus(msg,type=''){statusMsg.textContent=msg||'\u00A0';statusMsg.className='status-msg'+(type?' '+type:'');}
+const game=new SudokuGame();
+function startNewGame(){const diff=difficultySelect.value;setStatus('Generating puzzle...','');setTimeout(()=>{try{const data=generatePuzzle(diff);game.loadPuzzle(data);resultSubmitted=false;}catch(e){console.error(e);setStatus('Error generating puzzle. Try again.','error');}},50);}
+newGameBtn.addEventListener('click',startNewGame);
+resetBtn.addEventListener('click',()=>{if(game.solution.some(row=>row.some(v=>v!==0)))game.resetPuzzle();else setStatus('Start a game first','error');});
+checkBtn.addEventListener('click',()=>game.checkSolution());
+hintBtn.addEventListener('click',()=>game.giveHint());
+clearBtn.addEventListener('click',()=>game.clearSelected());
+giveUpBtn.addEventListener('click',()=>game.giveUp());
+numpadBtns.forEach(btn=>{btn.addEventListener('click',()=>{const num=parseInt(btn.dataset.num);game.inputNumber(num);});});
+document.addEventListener('keydown',(e)=>{if(e.key>='1'&&e.key<='9'){e.preventDefault();game.inputNumber(parseInt(e.key));}else if(e.key==='Backspace'||e.key==='Delete'||e.key==='0'){e.preventDefault();game.inputNumber(0);}else if(e.key.startsWith('Arrow')){e.preventDefault();let r=game.selectedRow,c=game.selectedCol;if(r<0||c<0){r=4;c=4;}else{if(e.key==='ArrowUp')r=Math.max(0,r-1);if(e.key==='ArrowDown')r=Math.min(8,r+1);if(e.key==='ArrowLeft')c=Math.max(0,c-1);if(e.key==='ArrowRight')c=Math.min(8,c+1);}game.selectCell(r,c);}else if(e.key==='h'||e.key==='H'){e.preventDefault();game.giveHint();}else if(e.key==='c'||e.key==='C'){e.preventDefault();game.checkSolution();}});
+(async function main(){await initPOWR();startNewGame();})();
+});
 </script>
-
 </body>
 </html>
