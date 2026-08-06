@@ -6,6 +6,7 @@
 <title>Sudoku · POWR</title>
 <script src="./powr-sdk.js"></script>
 <style>
+/* ---- same as before (I'll include it all) ---- */
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height:100vh; display:flex; justify-content:center; align-items:center; padding:20px; }
 .game-container { background: rgba(255,255,255,0.85); backdrop-filter:blur(12px); border-radius:40px; padding:30px 35px; max-width:600px; width:100%; box-shadow:0 25px 50px -10px rgba(0,0,0,0.25); }
@@ -98,8 +99,14 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height:100v
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 'use strict';
+
+// ---- YOUR API KEY (keep it as is) ----
 const POWR_API_KEY = 'pk_288eebc13f0f88cf3fadba6f222a9c42f6d54ab8e8aafabc';
-const POWR_ORIGIN = 'https://powr.games';
+
+// ---- UPDATED: API URL from POWR support ----
+const POWR_API_URL = 'https://powr-games.vercel.app';   // <-- New!
+const POWR_ORIGIN = 'https://powr.games';               // Platform origin
+
 const boardEl = document.getElementById('board');
 const timerDisplay = document.getElementById('timerDisplay');
 const movesDisplay = document.getElementById('movesDisplay');
@@ -136,7 +143,26 @@ if(typeof POWR==='undefined'){console.error('[POWR] SDK not loaded');powrStatusE
 const token=new URLSearchParams(window.location.search).get('token');
 if(!token){powrStatusEl.textContent='⚪ Standalone';powrStatusEl.className='powr-status';console.log('[POWR] No token found. Running in standalone mode.');return;}
 if(!POWR_API_KEY||POWR_API_KEY==='pk_live_YOUR_ACTUAL_KEY'){powrStatusEl.textContent='⚠️ Missing API Key';console.error('[POWR] Please set your API key.');return;}
-try{powrStatusEl.textContent='⏳ Connecting...';powrClient=await POWR.init({apiKey:POWR_API_KEY,token:token,platformOrigin:POWR_ORIGIN,debug:true});powrInitialized=true;gameStartedAt=Date.now();powrStatusEl.textContent=`✅ ${powrClient.player.username}`;powrStatusEl.className='powr-status connected';console.log('[POWR] Connected successfully!',powrClient.player);setStatus(`Welcome ${powrClient.player.username}!`,'success');}catch(error){powrStatusEl.textContent='❌ Connection Error';console.error('[POWR] Init error:',error);setStatus('POWR connection failed. Playing offline.','error');}
+try{
+powrStatusEl.textContent='⏳ Connecting...';
+powrClient = await POWR.init({
+    apiKey: POWR_API_KEY,
+    token: token,
+    apiUrl: POWR_API_URL,      // <-- NEW: Vercel URL
+    platformOrigin: POWR_ORIGIN,
+    debug: true
+});
+powrInitialized=true;
+gameStartedAt=Date.now();
+powrStatusEl.textContent=`✅ ${powrClient.player.username}`;
+powrStatusEl.className='powr-status connected';
+console.log('[POWR] Connected successfully!',powrClient.player);
+setStatus(`Welcome ${powrClient.player.username}!`,'success');
+}catch(error){
+powrStatusEl.textContent='❌ Connection Error';
+console.error('[POWR] Init error:',error);
+setStatus('POWR connection failed. Playing offline.','error');
+}
 }
 async function submitResultToPOWR(win){if(resultSubmitted||!powrInitialized||!powrClient){console.log('[POWR] Skipping submit');return;}const duration=Math.floor((Date.now()-gameStartedAt)/1000);let score=Math.max(0,10000-(timerSeconds*10)-(moves*5));if(!win)score=0;try{resultSubmitted=true;const result=await powrClient.results.submit({score:Math.round(score),duration:duration,win:win,completed:true,customStats:{moves:moves,hintsUsed:3-hintsRemaining,finalTime:timerSeconds}});console.log('[POWR] Result submitted successfully!',result);setStatus(`✅ Submitted! +${result.xpEarned} XP, +${result.coinsEarned} Coins`,'success');}catch(error){resultSubmitted=false;console.error('[POWR] Submission error:',error);setStatus('❌ Failed to submit result. Check console.','error');}}
 
